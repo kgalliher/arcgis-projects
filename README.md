@@ -2,7 +2,7 @@
 ArcGIS Pro parcel fabric samples and snippets using various ArcGIS SDKs and APIs
 
 ## ArcGIS Javascript API [parcels-jsapi](https://github.com/kgalliher/arcgis-projects/tree/main/parcels-jsapi)
-### Samples that demonstrate working with a published parcel fabric. Includes calls to `ParcelFabricServer`, `FeatureServer` and `VersionManagementServer` endpoints
+### Samples that demonstrate using TypeScript and ESM modules with a published parcel fabric. Includes calls to `ParcelFabricServer`, `FeatureServer` and `VersionManagementServer` endpoints
 
 ### [Digitize/Build Parcels](https://github.com/kgalliher/arcgis-projects/tree/main/parcels-jsapi/ParcelRecordsDataEntry)
 Draw lines and polygons and build them into the Pro Parcel Fabric
