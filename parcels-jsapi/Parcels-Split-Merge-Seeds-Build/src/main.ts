@@ -42,12 +42,12 @@ vms.setVersion(versionName)
     // Hiding the map and layer details in another class UserInterface
     let mapUi = new MapElements(baseUrl, currentVersion);
     const map = mapUi.generateMapAndLayers();
-    
+
     // Capture the active record GUID
     let activeRecordGuid = "";
     const setActiveRecord = (recordGuid) => {
       activeRecordGuid = recordGuid;
-      
+
     }
 
     // Shows the access of a single layer
@@ -80,36 +80,37 @@ vms.setVersion(versionName)
       outputMessages.scrollTop = outputMessages.scrollHeight;
     }
 
-    function clearMessages(){
+    function clearMessages() {
       outputMessages.innerHTML = "";
     }
 
-    function setButtonDisabled(idName: string, isDisabled: boolean){
+    function setButtonDisabled(idName: string, isDisabled: boolean) {
       const element = (document.getElementById(idName) as HTMLButtonElement)
       element.disabled = isDisabled;
       const currentEnabledValue = element.getAttribute("disabled")
-      if(currentEnabledValue != null)
+      if (currentEnabledValue != null)
         element.style.backgroundColor = "lightgray";
       else
         element.style.backgroundColor = "#0079c1";
     }
 
-    function processResult(serviceEdits: Array<any>){
+    // Process result JSON for display
+    function processResult(serviceEdits: Array<any>) {
       let values = "";
-      if(serviceEdits){
+      if (serviceEdits) {
         serviceEdits.forEach(layer => {
-          if(layer.id === 15){
+          if (layer.id === 15) {
             let attributes = null;
-            if (layer.editedFeatures.hasOwnProperty("adds")){
+            if (layer.editedFeatures.hasOwnProperty("adds")) {
               attributes = layer.editedFeatures.adds[0].attributes;
             }
-            else if (layer.editedFeatures.hasOwnProperty("updates")){
+            else if (layer.editedFeatures.hasOwnProperty("updates")) {
               attributes = layer.editedFeatures.updates[0][0].attributes;
             }
-            else if (layer.editedFeatures.hasOwnProperty("deletes")){
+            else if (layer.editedFeatures.hasOwnProperty("deletes")) {
               attributes = layer.editedFeatures.updates[0].attributes;
             }
-            
+
             console.log('adds :>> ', attributes);
             values = `
               <br><span>Parcel Edits:</span>
@@ -119,15 +120,15 @@ vms.setVersion(versionName)
               <span>Stated Area:</span>&nbsp;&nbsp;${attributes.StatedArea}<br>
               `
           }
-          if(layer.id === 14){
+          if (layer.id === 14) {
             let attributes = null;
-            if (layer.editedFeatures.hasOwnProperty("adds")){
+            if (layer.editedFeatures.hasOwnProperty("adds")) {
               attributes = layer.editedFeatures.adds[0].attributes;
             }
-            else if (layer.editedFeatures.hasOwnProperty("updates")){
+            else if (layer.editedFeatures.hasOwnProperty("updates")) {
               attributes = layer.editedFeatures.updates[0][0].attributes;
             }
-            else if (layer.editedFeatures.hasOwnProperty("deletes")){
+            else if (layer.editedFeatures.hasOwnProperty("deletes")) {
               attributes = layer.editedFeatures.updates[0][0].attributes;
             }
             console.log('Line edits :>> ', attributes);
@@ -203,15 +204,15 @@ vms.setVersion(versionName)
     // Function to populate feature array. Async issue when pushing directly in function above.
     function captureFeatures(feature: __esri.Feature) {
       selectedFeatures.push(feature);
-      let pinValue = selectedFeatures[selectedFeatures.length -1].attributes.Name;
+      let pinValue = selectedFeatures[selectedFeatures.length - 1].attributes.Name;
       displayMessage(`<span>Selected Parcel:</span> ${pinValue}<br>`);
       selectedParcelPins.push(pinValue);
-      if(selectedFeatures.length == 1){
+      if (selectedFeatures.length == 1) {
         setButtonDisabled("btnCopyLines", false);
       }
-      if(selectedFeatures.length >= 2){
+      if (selectedFeatures.length >= 2) {
         setButtonDisabled("btnMerge", false);
-        let parcelPins = selectedParcelPins.join(); 
+        let parcelPins = selectedParcelPins.join();
         let parcelPinInput = (document.getElementById("parcelPins") as HTMLInputElement);
         parcelPinInput.value = parcelPins;
       }
@@ -315,17 +316,18 @@ vms.setVersion(versionName)
 
     const editor = new Editor({
       view: view,
-      snappingOptions: {enabled: true, featureSources: [{layer: parcelLinesLayer}]},
+      snappingOptions: { enabled: true, featureSources: [{ layer: parcelLinesLayer }] },
       layerInfos: [{
-                    layer: parcelLinesLayer,
-                      formTemplate: linesFormTemplate,
-                    },
-                    {layer: parcelLayer,
-                      enabled: true,
-                      formTemplate: parcelsFormTemplate,
-                    }
-                  ],
-                });
+        layer: parcelLinesLayer,
+        formTemplate: linesFormTemplate,
+      },
+      {
+        layer: parcelLayer,
+        enabled: true,
+        formTemplate: parcelsFormTemplate,
+      }
+      ],
+    });
 
     // When drawing a line, send the globalid to AssignFeaturesToRecord to add CreatedByRecord value
     parcelLinesLayer.on("edits", function (event) {
@@ -368,14 +370,14 @@ vms.setVersion(versionName)
       (document.getElementById("parcelPins") as HTMLInputElement).value = "";
       displayMessage("<br><span>Selection cleared</span><br/>");
     })
-    
-  // PARCEL FABRIC ----------------------
+
+    // PARCEL FABRIC ----------------------
     // Event listeners that execute the FS and ParcelFabric functions
     let btnCreateRec = document.getElementById("btnCreateRec");
 
     btnCreateRec.addEventListener("click", async () => {
-      let newRecName = (document.getElementById("recordName")as HTMLInputElement).value;
-      let parcelPins = (document.getElementById("parcelPins")as HTMLInputElement).value;
+      let newRecName = (document.getElementById("recordName") as HTMLInputElement).value;
+      let parcelPins = (document.getElementById("parcelPins") as HTMLInputElement).value;
       displayMessage(`<br><span>Creating record:</span> ${newRecName}`);
       selectPinsForMerge(parcelPins.split(","));
 
@@ -383,29 +385,29 @@ vms.setVersion(versionName)
       const recordExists = await pfs.checkRecordExists(newRecName)
       console.log(recordExists);
 
-      if (recordExists){
+      if (recordExists) {
         await pfs.setExistingRecord(newRecName);
         displayMessage(`<br><span>Successfully set active record</span> ${pfs.activeRecord.recordName}`)
         document.getElementById("activeRecordName").innerHTML = pfs.activeRecord.recordName;
         setActiveRecord(pfs.activeRecord.recordGuid)
-      }  
-      else{
-        pfs.createRecord(newRecName)
-        .then((res) => {
-          displayMessage(`<br><span>Successfully set active record</span> ${pfs.activeRecord.recordName}`)
-          let parcelPinInput = (document.getElementById("parcelPins") as HTMLInputElement);
-          parcelPinInput.value = "";
-          selectedParcelPins = [];
-          document.getElementById("activeRecordName").innerHTML = pfs.activeRecord.recordGuid;
-          // document.getElementById("activeRecordGuid").innerHTML = pfs.activeRecord.recordGuid;
-          setActiveRecord(pfs.activeRecord.recordGuid)
-          
-        })
-        .catch((err) => {
-          displayMessage(`<br><span>Error creating/setting record:</span> ${err}`)
-        });
       }
-        // })
+      else {
+        pfs.createRecord(newRecName)
+          .then((res) => {
+            displayMessage(`<br><span>Successfully set active record</span> ${pfs.activeRecord.recordName}`)
+            let parcelPinInput = (document.getElementById("parcelPins") as HTMLInputElement);
+            parcelPinInput.value = "";
+            selectedParcelPins = [];
+            document.getElementById("activeRecordName").innerHTML = pfs.activeRecord.recordGuid;
+            // document.getElementById("activeRecordGuid").innerHTML = pfs.activeRecord.recordGuid;
+            setActiveRecord(pfs.activeRecord.recordGuid)
+
+          })
+          .catch((err) => {
+            displayMessage(`<br><span>Error creating/setting record:</span> ${err}`)
+          });
+      }
+      // })
     });
 
     // Copy selected parcels to parcel type.
@@ -446,7 +448,7 @@ vms.setVersion(versionName)
     // Create seeds with active record.
     let btnBuildParcels = document.getElementById("btnBuildParcels");
     btnBuildParcels.addEventListener("click", () => {
-      const recordName = (document.getElementById("recordName")as HTMLInputElement).value;
+      const recordName = (document.getElementById("recordName") as HTMLInputElement).value;
       displayMessage(`<br><span>Building parcels in:</span><p>${recordName}</p><br>`)
       // Merge the selected with the ParcelFabricService
       pfs.buildRecord()

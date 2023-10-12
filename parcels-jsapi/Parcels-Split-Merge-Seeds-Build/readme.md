@@ -30,10 +30,11 @@ npm install
 
 To start the application, run the following command:
 
+This project uses Vite.
+
 ```
 npm run dev
 ```
-This project uses Vite.
 
 This will start a development server and open the application in your default web browser (defaults to `http://localhost:5173/`). 
 

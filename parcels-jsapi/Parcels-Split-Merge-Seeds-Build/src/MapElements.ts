@@ -4,25 +4,29 @@ import FieldElement from "@arcgis/core/form/elements/FieldElement";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import LabelClass from "@arcgis/core/layers/support/LabelClass";
 
-export interface FLayer{
+export interface FLayer {
   name: string;
   flayer: FeatureLayer;
 }
 
+/**
+ * Class for managing the creation and properties of feature layers,
+ * displaying features and symbology in the map
+ */
 export class MapElements {
   private versionName: string;
   private _baseUrl: string;
   public mapLayers: FeatureLayer[] = [];
   public map: __esri.Map;
 
-  constructor(baseUrl:string, currentVersion: string){
+  constructor(baseUrl: string, currentVersion: string) {
     this._baseUrl = baseUrl;
     this.versionName = currentVersion;
     this.map = this.generateMapAndLayers();
   }
 
   addMapLayer(layerId: number, idLabel: string, outfields: string[], defQuery: string, labelClass: LabelClass): FeatureLayer {
-    if(this.versionName == "")
+    if (this.versionName == "")
       this.versionName = "sde.DEFAULT";
 
     let layer = new FeatureLayer({
@@ -42,7 +46,7 @@ export class MapElements {
 
   refreshLayers(): void {
     let layers = this.mapLayers;
-    for(let key of Object.keys(layers)){
+    for (let key of Object.keys(layers)) {
       layers[key].refresh();
     }
   }
@@ -70,7 +74,7 @@ export class MapElements {
         haloColor: "white"
       }
     });
-  
+
     const recordLabelClass = new LabelClass({
       labelExpressionInfo: { expression: "$feature.NAME" },
       labelPlacement: "always-horizontal",
@@ -82,7 +86,9 @@ export class MapElements {
         haloColor: "white"
       }
     });
-  
+
+    // Parcel types consist of line and polygon feature classes
+    // Represent historic parcel features via definition expression
     let parcelLayer = new FeatureLayer({
       title: "Tax Parcels",
       url: `${this._baseUrl}FeatureServer/15`,
@@ -95,7 +101,7 @@ export class MapElements {
       definitionExpression: "RetiredByRecord IS NULL",
     });
     this.mapLayers["parcels"] = parcelLayer;
-  
+
     const historicParcelLayerRenderer = {
       type: "simple",
       symbol: {
@@ -105,6 +111,7 @@ export class MapElements {
         color: [255, 0, 0, 0.25]
       }
     }
+    // historic features have a CreatedByRecord value
     let historicParcelLayer = new FeatureLayer({
       title: "Historic Tax Parcels",
       url: `${this._baseUrl}FeatureServer/15`,
@@ -129,10 +136,10 @@ export class MapElements {
       gdbVersion: this.versionName,
       definitionExpression: "RetiredByRecord IS NULL",
     });
-    this.mapLayers["parcelLines"] = parcelLinesLayer;    
-    
+    this.mapLayers["parcelLines"] = parcelLinesLayer;
+
     const recordsLayerRenderer = {
-      type: "simple",  
+      type: "simple",
       symbol: {
         type: "simple-fill",  // autocasts as new SimpleMarkerSymbol()
         size: 6,
@@ -141,6 +148,7 @@ export class MapElements {
       }
     }
 
+    // Parcel records feature layer
     let recordsLayer = new FeatureLayer({
       title: "records",
       url: `${this._baseUrl}FeatureServer/1`,
@@ -151,8 +159,8 @@ export class MapElements {
       renderer: recordsLayerRenderer
     });
 
-    this.mapLayers["records"] = recordsLayer;    
-  
+    this.mapLayers["records"] = recordsLayer;
+
     const map = new EsriMap({
       basemap: "streets-vector",
       layers: [recordsLayer, historicParcelLayer, parcelLayer, parcelLinesLayer]
@@ -161,7 +169,7 @@ export class MapElements {
     return map;
   }
 
-  generateFormTemplate(): FormTemplate{
+  generateFormTemplate(): FormTemplate {
     const nameElement = new FieldElement({
       fieldName: "Name",
       label: "Parcel Name",
@@ -182,7 +190,7 @@ export class MapElements {
     return formTemplate;
   }
 
-  lineLabelExpression(){
+  lineLabelExpression() {
     const arcade = document.getElementById("cogo-label").text;
     return arcade;
   }

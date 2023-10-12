@@ -7,6 +7,12 @@ export interface Record {
   recordGuid: string;
 }
 
+/**
+ * Class to access the ParcelFabricServer service
+ * Manage and create parcel records and execute some 
+ * parcel fabric editing functions
+ * https://developers.arcgis.com/rest/services-reference/enterprise/overview-of-parcel-fabric-sevices.htm
+ */
 export class ParcelFabricService {
   private _pfUrl: string;
   private _recordsUrl: string;
@@ -32,7 +38,7 @@ export class ParcelFabricService {
     this.outputMessages.scrollTop = this.outputMessages.scrollHeight;
   }
 
-  clearMessages(){
+  clearMessages() {
     this.outputMessages.innerHTML = "";
   }
 
@@ -41,7 +47,7 @@ export class ParcelFabricService {
       const fl = new FeatureLayer({
         url: this._recordsUrl
       })
-  
+
       let query = fl.createQuery();
       query.where = `Name = '${recordName}'`;
       query.outFields = ["OBJECTID", "Name", "GlobalID"]
@@ -53,28 +59,36 @@ export class ParcelFabricService {
         })
         .catch((err) => {
           console.log(err);
-          
+
         })
     })
   }
-  setExistingRecord(recordName: string){
+
+  //#region Record management
+  /* Verify existing/new parcel record 
+    - Check if a submitted record exists
+    - If the record exists, set that record
+    - Else, create a new record with the submitted name
+  */
+
+  setExistingRecord(recordName: string) {
     return new Promise((resolve, reject) => {
       this.getRecord(recordName)
-      .then((res) => {
-        let recordId = res.features[0].attributes["GlobalID"];
-        let record: Record = { recordName: recordName, recordGuid: recordId }
-        this.activeRecord = record;
-        this.displayMessage(`<br><span>Record already exists. Setting:</span> ${this.activeRecord.recordName}`)
-        resolve(recordId);
-      })
-      .then(() => {
-        Promise.resolve(this.createRecord(recordName));
-      })
-      .catch((err) => {
-        console.log(err);
-        
-      })
-  });
+        .then((res) => {
+          let recordId = res.features[0].attributes["GlobalID"];
+          let record: Record = { recordName: recordName, recordGuid: recordId }
+          this.activeRecord = record;
+          this.displayMessage(`<br><span>Record already exists. Setting:</span> ${this.activeRecord.recordName}`)
+          resolve(recordId);
+        })
+        .then(() => {
+          Promise.resolve(this.createRecord(recordName));
+        })
+        .catch((err) => {
+          console.log(err);
+
+        })
+    });
   }
 
   async checkRecordExists(recordName): Promise<any> {
@@ -82,29 +96,34 @@ export class ParcelFabricService {
       const fl = new FeatureLayer({
         url: this._recordsUrl
       })
-  
+
       let query = fl.createQuery();
       query.where = `Name = '${recordName}'`;
       query.outFields = ["OBJECTID", "Name", "GlobalID"]
       query.gdbVersion = this._versionName;
       fl.queryFeatures(query)
         .then((res) => {
-          if(res.features.length > 0){
+          if (res.features.length > 0) {
             resolve(true);
           }
-          
+
           resolve(false);
 
-          })
+        })
         .catch((err) => {
           console.log(err);
-          
+
         })
     })
   }
 
+  /**
+   * Uses the /FeatureServer/1 (Records) endpoint to create a new parcel record entry
+   * @param recordName 
+   * @returns 
+   */
   async createRecord(recordName: string): Promise<__esri.RequestResponse> {
-    return new Promise((resolve, reject) => { 
+    return new Promise((resolve, reject) => {
       this.vms.toggleEditSession("startReading")
         .then((resp) => {
           this.vms.reserveObjectIds(this._recordsUrl, 1)
@@ -152,145 +171,172 @@ export class ParcelFabricService {
             })
         })
         .catch((err) => {
-            reject(false);
-            console.log(err)
+          reject(false);
+          console.log(err)
         })
     });
   }
-  
+
+  //#endregion
+
+  /**
+   * To participate in parcel fabric functions, a parcel feature requires its 
+   * CreateByRecord value to be updated with the GlobalID of the "active record".
+   * The assignFeaturesToRecord function adds the CreatedByRecord value to the feature.
+   * https://developers.arcgis.com/rest/services-reference/enterprise/assigntorecord-parcel-fabric-server.htm
+   * @param layerId the layerId of the target feature
+   * @param addedFeatureGuid the globalid of the target feature
+   * @returns Promise<void>
+   */
   assignFeatureToRecord(layerId: number, addedFeatureGuid: string): Promise<__esri.RequestResponse> {
     return new Promise((resolve, reject) => {
       this.vms.toggleEditSession("startReading")
-      .then((res) => {
-        const sessionId = this.vms.getSessionId();
-        const activeRecordGuid = this.activeRecord.recordGuid;
-        const versionName = this.vms.getVersion().versionName;
+        .then((res) => {
+          const sessionId = this.vms.getSessionId();
+          const activeRecordGuid = this.activeRecord.recordGuid;
+          const versionName = this.vms.getVersion().versionName;
 
-        let assignToRecordOptions = {
-          "f": "json",
-          "gdbVersion": versionName,
-          "sessionId": sessionId,
-          "record": activeRecordGuid,
-          "parcelFeatures": `[{"id":"${addedFeatureGuid}","layerId":"${layerId}"}]`,
-          "writeAttribute": "CreatedByRecord",
-          "async": false,
-        }
+          let assignToRecordOptions = {
+            "f": "json",
+            "gdbVersion": versionName,
+            "sessionId": sessionId,
+            "record": activeRecordGuid,
+            "parcelFeatures": `[{"id":"${addedFeatureGuid}","layerId":"${layerId}"}]`,
+            "writeAttribute": "CreatedByRecord",
+            "async": false,
+          }
 
-        esriRequest(this._pfUrl + "/assignFeaturesToRecord", {
-          "method": "post",
-          "responseType": "json",
-          "query": assignToRecordOptions
+          esriRequest(this._pfUrl + "/assignFeaturesToRecord", {
+            "method": "post",
+            "responseType": "json",
+            "query": assignToRecordOptions
+          })
+            .then(function (response) {
+              if (response.data.success === true) {
+                resolve(response.data.serviceEdits);
+
+              }
+            })
+            .then(() => {
+              // stop the reading session
+              this.vms.toggleEditSession("stopReading");
+            })
+            .catch((err) => {
+              this.vms.toggleEditSession("stopReading");
+              reject(err);
+            })
         })
-          .then(function (response) {
-            if (response.data.success === true) {
-              resolve(response.data.serviceEdits);
-
-            }
-          })
-          .then(() => {
-            // stop the reading session
-            this.vms.toggleEditSession("stopReading");
-          })
-          .catch((err) => {
-            this.vms.toggleEditSession("stopReading");
-            reject(err);
-          })
-      })
-      .catch((err) => {
-        console.log(err);
-        this.displayMessage(err);
-      })
+        .catch((err) => {
+          console.log(err);
+          this.displayMessage(err);
+        })
     })
   }
- 
+
+  /**
+   * Create parcel seeds for closed loops of lines that are associated with the specified record.
+   * https://developers.arcgis.com/rest/services-reference/enterprise/createseeds-parcel-fabric-server.htm
+   * @returns Promise<void>
+   */
   createSeeds(): Promise<__esri.RequestResponse> {
     return new Promise((resolve, reject) => {
       this.vms.toggleEditSession("startReading")
-      .then((res) => {
-        const sessionId = this.vms.getSessionId();
-        const activeRecordGuid = this.activeRecord.recordGuid;
-        const versionName = this.vms.getVersion().versionName;
+        .then((res) => {
+          const sessionId = this.vms.getSessionId();
+          const activeRecordGuid = this.activeRecord.recordGuid;
+          const versionName = this.vms.getVersion().versionName;
 
-        let createSeedsOptions = {
-          "f": "json",
-          "gdbVersion": versionName,
-          "sessionId": sessionId,
-          "record": activeRecordGuid,
-          "async": false,
-        }
+          let createSeedsOptions = {
+            "f": "json",
+            "gdbVersion": versionName,
+            "sessionId": sessionId,
+            "record": activeRecordGuid,
+            "async": false,
+          }
 
-        esriRequest(this._pfUrl + "/createSeeds", {
-          "method": "post",
-          "responseType": "json",
-          "query": createSeedsOptions
+          esriRequest(this._pfUrl + "/createSeeds", {
+            "method": "post",
+            "responseType": "json",
+            "query": createSeedsOptions
+          })
+            .then(function (response) {
+              if (response.data.success === true) {
+                resolve(response.data.serviceEdits);
+              }
+            })
+            .then(() => {
+              // stop the reading session
+              this.vms.toggleEditSession("stopReading");
+            })
+            .catch((err) => {
+              reject(err);
+            })
         })
-          .then(function (response) {
-            if (response.data.success === true) {
-              resolve(response.data.serviceEdits);
-            }
-          })
-          .then(() => {
-            // stop the reading session
-            this.vms.toggleEditSession("stopReading");
-          })
-          .catch((err) => {
-            reject(err);
-          })
-      })
-      .catch((err) => {
-        console.log(err);
-        this.displayMessage(err);
-      })
+        .catch((err) => {
+          console.log(err);
+          this.displayMessage(err);
+        })
     })
   }
 
+  /**
+   * Build creates parcels from polygons or lines by creating missing parcel features.
+   * https://developers.arcgis.com/rest/services-reference/enterprise/build-parcel-fabric-server.htm
+   * @returns 
+   */
   buildRecord(): Promise<__esri.RequestResponse> {
     return new Promise((resolve, reject) => {
       this.vms.toggleEditSession("startReading")
-      .then((res) => {
-        const sessionId = this.vms.getSessionId();
-        const activeRecordGuid = this.activeRecord.recordGuid;
-        const versionName = this.vms.getVersion().versionName;
+        .then((res) => {
+          const sessionId = this.vms.getSessionId();
+          const activeRecordGuid = this.activeRecord.recordGuid;
+          const versionName = this.vms.getVersion().versionName;
 
-        const buildOptions = {
-          "f": "json",
-          "gdbVersion": versionName,
-          "sessionId": sessionId,
-          "record": activeRecordGuid,
-          "async": false,
-        }
+          const buildOptions = {
+            "f": "json",
+            "gdbVersion": versionName,
+            "sessionId": sessionId,
+            "record": activeRecordGuid,
+            "async": false,
+          }
 
-        esriRequest(this._pfUrl + "/build", {
-          "method": "post",
-          "responseType": "json",
-          "query": buildOptions
+          esriRequest(this._pfUrl + "/build", {
+            "method": "post",
+            "responseType": "json",
+            "query": buildOptions
+          })
+            .then(function (response) {
+              if (response.data.success === true) {
+                // const resultVal = processMergeResult(response.data.serviceEdits)
+                resolve(response.data.serviceEdits);
+
+              }
+            })
+            .then(() => {
+              // stop the reading session
+              this.vms.toggleEditSession("stopReading");
+            })
+            .catch((err) => {
+              reject(err);
+            })
         })
-          .then(function (response) {
-            if (response.data.success === true) {
-              // const resultVal = processMergeResult(response.data.serviceEdits)
-              resolve(response.data.serviceEdits);
-
-            }
-          })
-          .then(() => {
-            // stop the reading session
-            this.vms.toggleEditSession("stopReading");
-          })
-          .catch((err) => {
-            reject(err);
-          })
-      })
-      .catch((err) => {
-        console.log(err);
-        this.displayMessage(err);
-      })
+        .catch((err) => {
+          console.log(err);
+          this.displayMessage(err);
+        })
     })
   }
 
+  /**
+   * Copies selected lines or the lines of selected parcels to the specified parcel type and specified record.
+   * https://developers.arcgis.com/rest/services-reference/enterprise/copylinesto-parcel-fabric-server.htm
+   * @param selectedFeatures an array of globalIds and layerIds of selected parcel polygons
+   * @returns Promis<void>
+   */
   copyLinesTo(selectedFeatures: __esri.Feature[]): Promise<__esri.RequestResponse> {
     return new Promise((resolve, reject) => {
       this.vms.toggleEditSession("startReading")
-      .then((res) => {
+        .then((res) => {
           let sessionId = this.vms.getSessionId();
           let activeRecordGuid = this.activeRecord.recordGuid;
           let versionName = this.vms.getVersion().versionName;
@@ -315,10 +361,10 @@ export class ParcelFabricService {
             "targetParcelSubtype": -1000,
             "attributeOverrides": '{"type":"PropertySet","propertySetItems":[]}',
             "async": false,
-            
+
           }
           console.log(copyLinesToOptions);
-          
+
           esriRequest(this._pfUrl + "/copyLinesToParcelType", {
             "method": "post",
             "responseType": "json",
@@ -345,6 +391,14 @@ export class ParcelFabricService {
     });
   }
 
+  /**
+   * Merge creates a new parcel by merging two or more existing parcels in the parcel fabric.
+   * https://developers.arcgis.com/rest/services-reference/enterprise/merge-parcel-fabric-server.htm
+   * @param mergedFeatureName 
+   * @param mergedFeatureStatedArea 
+   * @param selectedFeatures 
+   * @returns Promise<void>
+   */
   mergeParcels(mergedFeatureName: string, mergedFeatureStatedArea: number, selectedFeatures: __esri.Feature[]): Promise<__esri.RequestResponse> {
     return new Promise((resolve, reject) => {
       this.vms.toggleEditSession("startReading")
