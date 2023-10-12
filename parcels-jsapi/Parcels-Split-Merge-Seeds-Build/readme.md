@@ -1,4 +1,4 @@
-# FabricESM
+# Parcel Fabric - Split/Merge/Build demo
 
 `Parcels-Split-Merge-Seeds-Build` is a TypeScript application that provides a user interface to select parcels in a parcel fabric, run the Merge function from the parcelfabricserver REST endpoint, and update specific attributes of the new parcel.
 

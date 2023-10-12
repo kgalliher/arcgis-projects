@@ -1,6 +1,6 @@
-# FabricESM
+# Parcel Fabric - Digitize/Build Parcels
 
-`FabricESM` is a TypeScript application that provides a user interface to select parcels in a parcel fabric, run the Merge function from the parcelfabricserver REST endpoint, and update specific attributes of the new parcel.
+`Parcels-Digitize-Build` is a TypeScript application that allows a user to build closed loops of lines or polygons into parcels. This sample makes use of the standard Editor widget to draw lines or polygons; the `ParcelFabricServer/createSeeds` function to detect closed loops and insert parcel polygons and the `ParcelFabricServer/Build` function to finish the parcel creation process
 
 ## Installation
 
@@ -11,13 +11,13 @@ To install the project, follow these steps:
 1. Clone the repository to your local machine using Git:
 
 ```
-git clone https://github.com/kgalliher/kg-projects.git
+git clone https://github.com/kgalliher/arcgis-projects.git
 ```
 
-2. Navigate to the `kg-javascript/FabricESM` directory:
+2. Navigate to the `parcels-jsapi/Parcels-DigitizeBuild` directory:
 
 ```
-cd kg-projects/kg-javascript/FabricESM
+cd parcels-jsapi/Parcels-DigitizeBuild
 ```
 
 3. Install the dependencies:
@@ -30,16 +30,31 @@ npm install
 
 To start the application, run the following command:
 
+This project uses Vite.
+
 ```
-npm start
+npm run dev
 ```
 
-This will start a development server and open the application in your default web browser.
+This will start a development server and open the application in your default web browser (defaults to `http://localhost:5173/`). 
 
-The user interface allows you to create a new record, select parcels from the parcel fabric and specify the attributes for the new parcel that will result from merging the selected parcels. Once you have selected the parcels and specified the attributes, click the "Merge" button. This willsend a request to the `ParcelFabricServer` REST endpoint.
+Login:  `admin`/`esri.agp`
 
-If the merge is successful, the application will display a message indicating that the new parcel has been created and updated with the specified attributes.
+### Digitize Line Workflow
+1. Click `Begin` on top-right menu
+2. Type a name for a new parcel record
+3. Click the `Create Record` button 
+4. Select the `Published Lines` template on Editor pane
+5. Draw a closed loop of lines in the map
+6. Click `Create` in the Editor pane
+7. Click the `Create Seeds` button in the right menu
+8. Click the `Build` button to "build" the parcel
 
-## Configuration
-
-The `config.ts` file in the `src` directory contains the configuration settings for the application. You can modify these settings to customize the behavior of the application.
+### Digitize Polygon Workflow
+1. Click `Begin` on top-right menu
+2. Type a name for a new parcel record
+3. Click the `Create Record` button 
+4. Select the `Published Parcels` template on Editor pane
+5. Draw a polygon in the map
+6. Click `Create` in the Editor pane
+7. Click the `Build` button to "build" the parcel
