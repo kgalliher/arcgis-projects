@@ -14,3 +14,6 @@ Draw lines and polygons and build them into the Pro Parcel Fabric
 FabricESM is a TypeScript application that provides a user interface to select parcels in a parcel fabric, run the Merge function from the parcelfabricserver REST endpoint, and update specific attributes of the new parcel.
 
 ![image](https://github.com/kgalliher/arcgis-projects/assets/3092265/d33498d5-6a1c-4da5-8103-f9b19976e95e)
+
+## Using Python API for Branch Version Conflicts
+Use the ArcGIS Python API as a REST client to detect branch versioning conflicts and find verrsion differences in a parcel fabric
